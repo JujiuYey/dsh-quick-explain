@@ -8,6 +8,11 @@
  *
  * The Client half talks to this file through one POST route on the shared /api channel.
  */
+import { BlockAssembler, createAssistantMessage, createUserMessage } from '@deepseek-ai/dsh-llm'
+import { appendFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
 export const name = 'quick-explain'
 
 // The two services this plugin cannot work without.
@@ -38,6 +43,7 @@ function createThread(id, quote, context) {
     quote,
     context,
     messages: [],
+    route: undefined,
     state: 'thinking',
     text: '',
     error: undefined,
@@ -45,13 +51,10 @@ function createThread(id, quote, context) {
     controller: undefined,
     updatedAt: Date.now(),
   }
-  thread.messages.push({
-    role: 'user',
-    content: [{
-      type: 'text',
-      text: firstTurn(quote, context),
-    }],
-  })
+  thread.messages.push(createUserMessage({
+    content: [{ type: 'text', text: firstTurn(quote, context) }],
+    source: { kind: 'user' },
+  }))
   return thread
 }
 
@@ -92,17 +95,81 @@ export function apply(ctx, config = {}) {
     fail('没有可用的模型。请先在 DSH 设置里选择一个模型。', 'explain/no-model')
   }
 
-  // Explanations do not need deep thinking, and thinking tokens share the output budget,
-  // so ask for the least the model offers: 'off' when it has one, else its lowest level.
-  async function lowestEffort(route) {
+  // Explanations do not need deep thinking, and thinking tokens share the output
+  // budget with the answer. Prefer "off"; when the route reports no levels, still
+  // try "off" — the adapter refuses an unsupported level before provider I/O and
+  // the caller retries without it.
+  async function preferredEffort(route) {
     const info = await ctx.llm.resolveModelInfo?.(route.provider, route.model).catch(() => undefined)
     const efforts = info?.reasoning?.efforts ?? []
-    if (efforts.length === 0) return undefined
+    if (efforts.length === 0) return 'off'
     const off = efforts.find((entry) => entry.id === 'off')
     return off?.id ?? efforts.at(0)?.id
   }
 
-  // One model call for the latest turn of a thread. Runs in the background; the Client polls.
+  const isEffortRefusal = (failure) => failure?.code === 'UNSUPPORTED_REASONING_EFFORT'
+    || /reasoning effort/i.test(String(failure?.message ?? ''))
+
+  /** Re-send the last user turn with an explicit "answer only" nudge. */
+  function withNudge(messages) {
+    const last = messages.at(-1)
+    if (last?.role !== 'user') return messages
+    const blocks = last.content ?? []
+    const text = String(blocks.at(-1)?.text ?? '')
+    return [...messages.slice(0, -1), createUserMessage({
+      content: [{ type: 'text', text: `${text}\n\n(Your previous reply came back empty. Reply with the final answer text only — no reasoning, no preamble.)` }],
+      source: { kind: 'user' },
+    })]
+  }
+
+  /** Run one model attempt, assembling durable blocks and replay metadata like the agent loop does. */
+  async function streamOnce(thread, { effort, messages, signal }) {
+    const assembler = new BlockAssembler()
+    thread.text = ''
+    try {
+      for await (const chunk of ctx.llm.stream({
+        provider: thread.route.provider,
+        model: thread.route.model,
+        ...(effort === undefined ? {} : { reasoningEffort: effort }),
+        system: SYSTEM,
+        messages,
+        signal,
+      })) {
+        assembler.push(chunk)
+        if (chunk.type === 'text-delta') thread.text += chunk.text
+      }
+    } catch (error) {
+      const failure = { code: error?.code ?? 'INTERNAL', message: error?.message ?? String(error) }
+      return { assembler, finish: { kind: 'error', failure }, failure, text: thread.text.trim() }
+    }
+    const finish = assembler.finish
+    const failure = finish.kind === 'error' ? finish.failure : undefined
+    return { assembler, finish, failure, text: thread.text.trim() }
+  }
+
+  /** A compact JSON line we can inspect when a side call still fails. */
+  async function noteDiagnostic(thread, { effort, finish }) {
+    try {
+      const line = JSON.stringify({
+        at: new Date().toISOString(),
+        route: thread.route,
+        effort,
+        finish,
+        textLen: thread.text.length,
+        messages: thread.messages.map((message) => ({
+          role: message.role,
+          source: message.source?.kind,
+          replay: message.source?.replayState === undefined ? undefined : true,
+          blocks: message.content?.map((block) => block.type),
+        })),
+      })
+      await appendFile(join(process.env.DSH_HOME ?? tmpdir(), 'quick-explain-debug.jsonl'), `${line}\n`)
+    } catch {
+      // Diagnostics must never take the side chat down.
+    }
+  }
+
+  // One side conversation turn. Runs in the background; the Client polls.
   async function run(thread) {
     thread.state = 'thinking'
     thread.text = ''
@@ -111,43 +178,24 @@ export function apply(ctx, config = {}) {
     thread.updatedAt = Date.now()
     const controller = new AbortController()
     thread.controller = controller
-    let finish
+    const signal = controller.signal
+    let effort
+    let result
     try {
-      const route = await resolveRoute()
-      const effort = await lowestEffort(route)
-      // No output budget: reasoning models need room for both thinking and the
-      // answer. Retry once with an explicit final-text nudge if it comes back empty.
-      const NUDGE = '\n\n(Your previous reply came back empty. Reply with the final answer text only — no reasoning, no preamble.)'
-      for (let attempt = 0; attempt < 2; attempt += 1) {
-        thread.text = ''
-        finish = undefined
-        const chunkTypes = {}
-        const base = thread.messages
-        const messages = attempt === 0 ? base : (() => {
-          const last = base.at(-1)
-          if (last?.role !== 'user') return base
-          const text = (last.content?.at(-1)?.text ?? '') + NUDGE
-          return [...base.slice(0, -1), { ...last, content: [{ type: 'text', text }] }]
-        })()
-        console.debug(`[quick-explain] run: attempt=${attempt} route=${route.provider}/${route.model} effort=${JSON.stringify(effort)} turns=${messages.length}`)
-        for await (const chunk of ctx.llm.stream({
-          provider: route.provider,
-          model: route.model,
-          ...(effort === undefined ? {} : { reasoningEffort: effort }),
-          system: SYSTEM,
-          messages,
-          signal: controller.signal,
-        })) {
-          chunkTypes[chunk.type] = (chunkTypes[chunk.type] ?? 0) + 1
-          if (chunk.type === 'text-delta') thread.text += chunk.text
-          else if (chunk.type === 'finish') finish = chunk
-        }
-        console.debug(`[quick-explain] run: attempt=${attempt} done chunks=${JSON.stringify(chunkTypes)} finish=${JSON.stringify(finish)} textLen=${thread.text.length}`)
-        if (finish?.kind === 'error' || finish?.kind === 'aborted') break
-        if (thread.text.trim() !== '') break
+      thread.route = await resolveRoute()
+      effort = await preferredEffort(thread.route)
+      result = await streamOnce(thread, { effort, messages: thread.messages, signal })
+      // The route may reject a level it does not serve; retry with the route default.
+      if (result.failure !== undefined && isEffortRefusal(result.failure)) {
+        effort = undefined
+        result = await streamOnce(thread, { effort, messages: thread.messages, signal })
+      }
+      // An empty answer (some thinking-heavy replies) gets one explicit nudge.
+      if (result.failure === undefined && result.finish.kind !== 'aborted' && result.text === '') {
+        result = await streamOnce(thread, { effort, messages: withNudge(thread.messages), signal })
       }
     } catch (error) {
-      if (controller.signal.aborted) {
+      if (signal.aborted) {
         thread.state = 'cancelled'
         return
       }
@@ -156,24 +204,45 @@ export function apply(ctx, config = {}) {
       thread.error = error?.message ?? String(error)
       return
     }
-    if (finish?.kind === 'error') {
-      thread.state = 'error'
-      thread.errorCode = finish.failure?.code
-      thread.error = finish.failure?.message ?? '模型调用失败'
-      return
-    }
-    if (finish?.kind === 'aborted' || controller.signal.aborted) {
+    const finish = result.finish
+    if (signal.aborted || finish.kind === 'aborted') {
       thread.state = 'cancelled'
       return
     }
-    const text = thread.text.trim()
-    if (text === '') {
+    if (result.failure !== undefined) {
+      thread.state = 'error'
+      thread.errorCode = result.failure.code
+      thread.error = result.failure.message ?? '模型调用失败'
+      await noteDiagnostic(thread, { effort, finish })
+      return
+    }
+    if (result.text === '') {
       thread.state = 'error'
       thread.errorCode = 'EMPTY_RESPONSE'
       thread.error = '模型这次只输出了思考过程，没有给出回答，请重试一次。'
+      await noteDiagnostic(thread, { effort, finish })
       return
     }
-    thread.messages.push({ role: 'assistant', content: [{ type: 'text', text }] })
+    // Keep the exact assistant content (including reasoning blocks and their replay
+    // signatures): a follow-up request must replay them, or a thinking-enabled route
+    // answers with an empty message.
+    let message
+    try {
+      message = createAssistantMessage({
+        content: result.assembler.blocks(),
+        source: {
+          provider: thread.route.provider,
+          model: thread.route.model,
+          ...(result.assembler.replayState === undefined ? {} : { replayState: result.assembler.replayState }),
+        },
+      })
+    } catch (error) {
+      thread.state = 'error'
+      thread.errorCode = 'INTERNAL'
+      thread.error = `无法保存模型回复：${error?.message ?? String(error)}`
+      return
+    }
+    thread.messages.push(message)
     trimHistory(thread)
     thread.state = 'done'
     thread.updatedAt = Date.now()
@@ -205,11 +274,15 @@ export function apply(ctx, config = {}) {
         const question = String(payload?.question ?? '').trim()
         if (question === '') fail('问题是空的。', 'explain/invalid')
         const last = thread.messages.at(-1)
+        const userMessage = createUserMessage({
+          content: [{ type: 'text', text: question }],
+          source: { kind: 'user' },
+        })
         if (last?.role === 'user' && thread.messages.length > 1) {
           // Retry of a failed turn: replace it instead of stacking user messages.
-          last.content = [{ type: 'text', text: question }]
+          thread.messages[thread.messages.length - 1] = userMessage
         } else {
-          thread.messages.push({ role: 'user', content: [{ type: 'text', text: question }] })
+          thread.messages.push(userMessage)
         }
         trimHistory(thread)
         void run(thread)
