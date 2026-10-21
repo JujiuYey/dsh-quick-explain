@@ -36,8 +36,7 @@ In DSH Desktop: open the **Plugins** page (sidebar, or Settings → Plugins) →
 From a shell (for a profile the app does not reserve):
 
 ```sh
-npm pack dsh-quick-explain
-dsh plugin --profile <profile> add ./dsh-quick-explain-<version>.tgz
+dsh plugin --profile <profile> add dsh-quick-explain
 ```
 
 The Desktop `desktop` profile is owned by the Electron app — quit it fully before using the CLI, or install through the Plugins page.

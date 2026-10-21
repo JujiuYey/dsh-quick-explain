@@ -36,8 +36,7 @@ DSH Desktop：打开 **Plugins** 页面（侧边栏，或 设置 → 插件）�
 命令行（适用于非应用托管的 profile）：
 
 ```sh
-npm pack dsh-quick-explain
-dsh plugin --profile <profile> add ./dsh-quick-explain-<版本号>.tgz
+dsh plugin --profile <profile> add dsh-quick-explain
 ```
 
 Desktop 的 `desktop` profile 由 Electron 应用独占管理：用 CLI 前请先完全退出应用，或者直接用插件页面安装。
