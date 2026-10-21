@@ -92,7 +92,7 @@ The selected text, the paragraph around it, and your follow-up questions are sen
 ## Limitations
 
 - The explainer sees the selection plus its surrounding paragraph, not the full conversation history — that is the price of leaving the main session untouched.
-- Answers render as plain text; Markdown is not interpreted.
+- Answers render light inline Markdown (`**bold**` and `` `code` ``); headings and lists are not interpreted.
 - Side conversations are per-process; restarting DSH clears them.
 - UI strings are English and Chinese only.
 

@@ -18,7 +18,7 @@ const IDLE_TTL_MS = 30 * 60 * 1000
 const SWEEP_MS = 60 * 1000
 const MAX_QUOTE = 4000
 const MAX_CONTEXT = 4000
-const MAX_TOKENS = 1200
+const MAX_TOKENS = 2048
 const MAX_HISTORY = 12
 
 const SYSTEM = [
@@ -27,7 +27,8 @@ const SYSTEM = [
   'Explain the fragment clearly and briefly: what it means here, why it appears, and what it implies.',
   'If the fragment is a term, define it. If it is code, say what it does. If it is a claim, explain the reasoning behind it.',
   'The side chat must never pretend to continue the main task, never ask the user to resume it, and never speak for the main assistant.',
-  'Keep answers short (usually under 200 words). Prefer plain prose; light Markdown is acceptable.',
+  'Keep answers short (usually under 200 words).',
+  'Write plain text: no **bold**, no headings, no bullet syntax. Inline code in backticks is fine.',
   'Answer in the language of the selected fragment and the user question (usually Chinese).',
 ].join('\n')
 
@@ -91,6 +92,16 @@ export function apply(ctx, config = {}) {
     fail('没有可用的模型。请先在 DSH 设置里选择一个模型。', 'explain/no-model')
   }
 
+  // Explanations do not need deep thinking, and thinking tokens share the output budget,
+  // so ask for the least the model offers: 'off' when it has one, else its lowest level.
+  async function lowestEffort(route) {
+    const info = await ctx.llm.resolveModelInfo?.(route.provider, route.model).catch(() => undefined)
+    const efforts = info?.reasoning?.efforts ?? []
+    if (efforts.length === 0) return undefined
+    const off = efforts.find((entry) => entry.id === 'off')
+    return off?.id ?? efforts.at(0)?.id
+  }
+
   // One model call for the latest turn of a thread. Runs in the background; the Client polls.
   async function run(thread) {
     thread.state = 'thinking'
@@ -102,18 +113,26 @@ export function apply(ctx, config = {}) {
     let finish
     try {
       const route = await resolveRoute()
-      for await (const chunk of ctx.llm.stream({
-        provider: route.provider,
-        model: route.model,
-        ...(route.reasoningEffort === undefined ? {} : { reasoningEffort: route.reasoningEffort }),
-        system: SYSTEM,
-        messages: thread.messages,
-        maxTokens: MAX_TOKENS,
-        signal: controller.signal,
-      })) {
-        if (chunk.type === 'text-delta') thread.text += chunk.text
-        else if (chunk.type === 'finish') finish = chunk
-
+      const effort = await lowestEffort(route)
+      // A budget spent entirely on thinking yields an empty answer; retry wider once.
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        thread.text = ''
+        finish = undefined
+        for await (const chunk of ctx.llm.stream({
+          provider: route.provider,
+          model: route.model,
+          ...(effort === undefined ? {} : { reasoningEffort: effort }),
+          system: SYSTEM,
+          messages: thread.messages,
+          maxTokens: attempt === 0 ? MAX_TOKENS : MAX_TOKENS * 2,
+          signal: controller.signal,
+        })) {
+          if (chunk.type === 'text-delta') thread.text += chunk.text
+          else if (chunk.type === 'finish') finish = chunk
+        }
+        if (finish?.kind === 'error' || finish?.kind === 'aborted') break
+        if (thread.text.trim() !== '') break
+        if (finish?.kind !== 'max-tokens') break
       }
     } catch (error) {
       if (controller.signal.aborted) {
@@ -136,13 +155,11 @@ export function apply(ctx, config = {}) {
     const text = thread.text.trim()
     if (text === '') {
       thread.state = 'error'
-      thread.error = '模型没有返回内容。'
+      thread.error = '模型这次只输出了思考过程，没有给出回答，请重试一次。'
       return
     }
-    if (finish?.kind !== 'max-tokens') {
-      thread.messages.push({ role: 'assistant', content: [{ type: 'text', text }] })
-      trimHistory(thread)
-    }
+    thread.messages.push({ role: 'assistant', content: [{ type: 'text', text }] })
+    trimHistory(thread)
     thread.state = 'done'
     thread.updatedAt = Date.now()
   }

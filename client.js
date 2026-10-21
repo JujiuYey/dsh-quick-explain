@@ -15,36 +15,52 @@ window.__ModuleLoader__.load({
     const ROUTE = '/api/quick-explain'
     const MAX_SELECTION = 1200
     const MAX_CONTEXT = 2000
-    const ZH = String(navigator.language || '').toLowerCase().startsWith('zh')
-    const copy = ZH
-      ? {
-          chip: '💡 解释',
-          chipLabel: '解释选中的内容',
-          title: '临时解释',
-          subtitle: '独立对话 · 不会影响主对话',
-          close: '关闭',
-          thinking: '正在思考…',
-          placeholderBusy: '正在生成…',
-          placeholder: '继续追问（⌘/Ctrl+Enter 发送）',
-          send: '追问',
-          footer: '关闭后这段对话即丢弃，不会写入主对话。',
-          cancelled: '已取消。',
-          failed: '生成失败',
-        }
-      : {
-          chip: '💡 Explain',
-          chipLabel: 'Explain the selected text',
-          title: 'Quick explain',
-          subtitle: 'Separate chat · the main conversation is untouched',
-          close: 'Close',
-          thinking: 'Thinking…',
-          placeholderBusy: 'Generating…',
-          placeholder: 'Ask a follow-up (Cmd/Ctrl+Enter to send)',
-          send: 'Ask',
-          footer: 'Closing discards this chat; nothing is written to the main conversation.',
-          cancelled: 'Cancelled.',
-          failed: 'Generation failed',
-        }
+    // Follow the language DSH itself applies to <html lang>, not the OS default.
+    const COPY = {
+      zh: {
+        chip: '💡 解释',
+        chipLabel: '解释选中的内容',
+        title: '临时解释',
+        subtitle: '独立对话 · 不会影响主对话',
+        close: '关闭',
+        thinking: '正在思考…',
+        placeholderBusy: '正在生成…',
+        placeholder: '继续追问（⌘/Ctrl+Enter 发送）',
+        send: '追问',
+        footer: '关闭后这段对话即丢弃，不会写入主对话。',
+        cancelled: '已取消。',
+        failed: '生成失败',
+        empty: '模型这次只输出了思考过程，没有给出回答，请重试一次。',
+      },
+      en: {
+        chip: '💡 Explain',
+        chipLabel: 'Explain the selected text',
+        title: 'Quick explain',
+        subtitle: 'Separate chat · the main conversation is untouched',
+        close: 'Close',
+        thinking: 'Thinking…',
+        placeholderBusy: 'Generating…',
+        placeholder: 'Ask a follow-up (Cmd/Ctrl+Enter to send)',
+        send: 'Ask',
+        footer: 'Closing discards this chat; nothing is written to the main conversation.',
+        cancelled: 'Cancelled.',
+        failed: 'Generation failed',
+        empty: 'The model only produced reasoning this time. Please try again.',
+      },
+    }
+
+    function useIsZh() {
+      const read = () => String(document.documentElement.lang || navigator.language || '')
+        .toLowerCase()
+        .startsWith('zh')
+      const [isZh, setIsZh] = React.useState(read)
+      React.useEffect(() => {
+        const observer = new MutationObserver(() => setIsZh(read()))
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] })
+        return () => observer.disconnect()
+      }, [])
+      return isZh
+    }
 
     const token = {
       panel: 'var(--dsw-alias-bg-layer-2, #ffffff)',
@@ -181,6 +197,14 @@ window.__ModuleLoader__.load({
         lineHeight: 1.62,
       },
       think: { color: token.dim, lineHeight: 1.6 },
+      code: {
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+        fontSize: '0.92em',
+        background: token.bubble,
+        borderRadius: 4,
+        padding: '1px 4px',
+      },
+      blank: { height: 6 },
       error: { color: token.danger, lineHeight: 1.55, whiteSpace: 'pre-wrap' },
       composer: {
         display: 'flex',
@@ -225,7 +249,36 @@ window.__ModuleLoader__.load({
       },
     }
 
+    // Minimal inline Markdown: **bold** and `code`. Everything else stays literal text.
+    function inlineNodes(text, styles, keyPrefix) {
+      const nodes = []
+      const pattern = /(\*\*[^*]+\*\*|`[^`]+`)/g
+      let last = 0
+      let match
+      let index = 0
+      while ((match = pattern.exec(text)) !== null) {
+        if (match.index > last) nodes.push(text.slice(last, match.index))
+        const token = match[0]
+        if (token.startsWith('**')) nodes.push(h('strong', { key: `${keyPrefix}-b${index}` }, token.slice(2, -2)))
+        else nodes.push(h('code', { key: `${keyPrefix}-c${index}`, style: styles.code }, token.slice(1, -1)))
+        index += 1
+        last = match.index + token.length
+      }
+      if (last < text.length) nodes.push(text.slice(last))
+      return nodes
+    }
+
+    function RichAnswer({ text }) {
+      const lines = String(text).split('\n')
+      return h('div', { style: styles.answer }, lines.map((line, lineIndex) => h(
+        'div',
+        { key: lineIndex, style: line === '' ? styles.blank : undefined },
+        line === '' ? null : inlineNodes(line, styles, lineIndex),
+      )))
+    }
+
     function QuickExplain() {
+      const copy = COPY[useIsZh() ? 'zh' : 'en']
       const [chip, setChip] = React.useState(null)
       const [open, setOpen] = React.useState(false)
       const [quote, setQuote] = React.useState('')
@@ -426,10 +479,7 @@ window.__ModuleLoader__.load({
           if (turn.state === 'thinking' && turn.a === '') {
             body.push(h('div', { key: `t${index}`, style: styles.think }, copy.thinking))
           } else if (turn.a !== '') {
-            body.push(h('div', { key: `a${index}`, style: styles.answer }, turn.a))
-          }
-          if (turn.state === 'error' && turn.error !== undefined) {
-            body.push(h('div', { key: `e${index}`, style: styles.error }, turn.error))
+            body.push(h(RichAnswer, { key: `a${index}`, text: turn.a }))
           }
         })
 
