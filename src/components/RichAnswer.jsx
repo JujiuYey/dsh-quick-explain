@@ -1,3 +1,4 @@
+import React from 'react'
 /** Minimal inline Markdown: **bold** and `code`. Everything else stays literal text. */
 function inlineNodes(text, keyPrefix) {
   const nodes = []

@@ -1,3 +1,4 @@
+import React from 'react'
 export function Composer({ copy, draft, busy, onChange, onAsk }) {
   const onKeyDown = (event) => {
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {

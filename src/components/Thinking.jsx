@@ -1,3 +1,4 @@
+import React from 'react'
 export function Thinking({ copy }) {
   return (
     <div className="qe-think">

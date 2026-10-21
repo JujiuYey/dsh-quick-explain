@@ -1,3 +1,4 @@
+import React from 'react'
 import { SparkleIcon } from './icons.jsx'
 
 /** The floating "解释" button anchored to the current text selection. */

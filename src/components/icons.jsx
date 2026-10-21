@@ -1,3 +1,4 @@
+import React from 'react'
 // Custom sparkle glyphs, matching the plugin icon (see icon.svg); inherit the button's color.
 export function SparkleIcon() {
   return (

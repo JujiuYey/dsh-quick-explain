@@ -1,3 +1,4 @@
+import React from 'react'
 import { CloseIcon } from './icons.jsx'
 import { Thinking } from './Thinking.jsx'
 import { RichAnswer } from './RichAnswer.jsx'
