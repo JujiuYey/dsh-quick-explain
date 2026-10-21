@@ -1,4 +1,7 @@
-# dsh-quick-explain
+<div align="center">
+  <img src="icon.svg" width="96" alt="dsh-quick-explain logo">
+  <h1>dsh-quick-explain</h1>
+</div>
 
 [![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-4d6bfe)](https://github.com/deepseek-ai/deepseek-harness)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -96,6 +99,15 @@ The selected text, the paragraph around it, and your follow-up questions are sen
 - Answers render light inline Markdown (`**bold**` and `` `code` ``); headings and lists are not interpreted.
 - Side conversations are per-process; restarting DSH clears them.
 - UI strings are English and Chinese only.
+
+## Development
+
+The client is bundled from `src/` into a single injected script:
+
+```sh
+npm install   # also runs the build via `prepare`
+npm run build # regenerate client.js
+```
 
 ## License
 

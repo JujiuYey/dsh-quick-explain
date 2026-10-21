@@ -24,6 +24,13 @@
   "author": "JujiuYey",
   "license": "MIT",
   "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",

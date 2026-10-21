@@ -1,4 +1,7 @@
-# dsh-quick-explain
+<div align="center">
+  <img src="icon.svg" width="96" alt="dsh-quick-explain logo">
+  <h1>dsh-quick-explain</h1>
+</div>
 
 [![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-4d6bfe)](https://github.com/deepseek-ai/deepseek-harness)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -96,6 +99,15 @@ Host 半边（`index.js`）是无构建步骤的 ESM；Client 半边（`client.j
 - 回答支持轻量行内 Markdown（`**粗体**` 与 `` `代码` ``），不解析标题和列表。
 - 临时对话是进程内状态，重启 DSH 后清空。
 - 界面文案目前只有中英文。
+
+## 开发
+
+客户端由 `src/` 打包成单个注入脚本：
+
+```sh
+npm install   # prepare 钩子会自动构建
+npm run build # 重新生成 client.js
+```
 
 ## 许可证
 
