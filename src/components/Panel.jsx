@@ -73,9 +73,9 @@ export function Panel({ copy, at, quote, turns, busy, error, canRetry, draft, sc
               x2={box.w * 0.85}
               y2={box.h}
             >
-              <stop offset="0%" style={{ stopColor: 'var(--dsw-alias-brand-primary, #4d6bfe)', stopOpacity: 0 }} />
-              <stop offset="40%" style={{ stopColor: 'var(--dsw-alias-brand-primary, #4d6bfe)', stopOpacity: 0.75 }} />
-              <stop offset="100%" style={{ stopColor: 'var(--dsw-alias-brand-primary, #4d6bfe)', stopOpacity: 1 }} />
+              <stop offset="0%" style={{ stopColor: 'var(--qe-logo-soft, #6c86ff)', stopOpacity: 0 }} />
+              <stop offset="40%" style={{ stopColor: 'var(--qe-logo, #4d6bfe)', stopOpacity: 0.8 }} />
+              <stop offset="100%" style={{ stopColor: 'var(--qe-logo, #4d6bfe)', stopOpacity: 1 }} />
             </linearGradient>
           </defs>
           <rect

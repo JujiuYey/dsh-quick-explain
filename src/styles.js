@@ -3,7 +3,8 @@
  * and every value comes from a DSH theme token so light/dark follow the app.
  */
 export const CSS = `
-.qe-panel{position:fixed;z-index:92;width:min(400px,calc(100vw - 24px));max-height:min(560px,calc(100vh - 24px));
+.qe-panel{--qe-logo:#4d6bfe;--qe-logo-soft:#6c86ff;--qe-logo-strong:#3b58e0;
+  position:fixed;z-index:92;width:min(400px,calc(100vw - 24px));max-height:min(560px,calc(100vh - 24px));
   display:flex;flex-direction:column;overflow:visible;border-radius:var(--dsw-radius-xl,16px);
   background:transparent;box-shadow:var(--dsw-elevation-panel,0 8px 32px rgba(0,0,0,.12));
   color:var(--dsw-alias-label-primary,#16161a);font-family:inherit;font-size:var(--dsh-content-font-size,14px);
@@ -14,7 +15,7 @@ export const CSS = `
 .qe-edge{position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);pointer-events:none;overflow:visible}
 .qe-comet{fill:none;stroke:url(#qe-comet-grad);stroke-width:2;stroke-linecap:round;stroke-dasharray:18 82;
   animation:qe-travel 4.2s linear infinite;
-  filter:drop-shadow(0 0 6px color-mix(in srgb,var(--dsw-alias-brand-primary,#4d6bfe) 70%,transparent))}
+  filter:drop-shadow(0 0 6px color-mix(in srgb,var(--qe-logo,#4d6bfe) 70%,transparent))}
 @keyframes qe-travel{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}
 @keyframes qe-pop{from{transform:scale(.97) translateY(4px);opacity:0}to{transform:none;opacity:1}}
 .qe-header{height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 16px}
@@ -62,9 +63,9 @@ export const CSS = `
 .qe-input::placeholder{color:var(--dsw-alias-label-tertiary,#8a8b91)}
 .qe-sendrow{display:flex;justify-content:flex-end;align-items:center;gap:8px}
 .qe-send{flex:none;width:32px;height:32px;padding:0;border:0;border-radius:50%;display:grid;place-items:center;
-  background:var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary,#4d6bfe));
-  color:var(--dsw-alias-label-primary-foreground,#fff);cursor:pointer}
-.qe-send:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary,#3b58e0))}
+  background:var(--qe-logo,#4d6bfe);
+  color:#fff;cursor:pointer}
+.qe-send:hover:not(:disabled){background:var(--qe-logo-strong,#3b58e0)}
 .qe-send:disabled{background:var(--dsw-alias-button-primary-dimmed,#e6e9f2);color:var(--dsw-alias-label-dimmed,#9a9ba2);cursor:default}
 .qe-footer{flex:none;padding:0 16px 12px;color:var(--dsw-alias-label-tertiary,#8a8b91);font-size:11.5px;line-height:16px}
 .qe-chip{position:fixed;z-index:90;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;
@@ -72,6 +73,6 @@ export const CSS = `
   color:var(--dsw-alias-label-primary,#16161a);box-shadow:var(--dsw-elevation-panel,0 3px 8px rgba(0,0,0,.08));
   font:inherit;font-size:12px;line-height:1;cursor:pointer;user-select:none}
 .qe-chip:hover{background:var(--dsw-alias-button-floating-hover,var(--dsw-alias-bg-layer-2,#f2f2f4))}
-.qe-chip svg{color:var(--dsw-alias-brand-primary,#4d6bfe)}
+.qe-chip svg{color:var(--qe-logo,#4d6bfe)}
 @media (prefers-reduced-motion:reduce){.qe-panel{animation:none}.qe-dot{animation:none;opacity:.55}.qe-comet{animation:none;stroke-dashoffset:-40}}
 `
