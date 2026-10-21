@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quick Explain · 边框流光方案</title>
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f5f7;
+    --panel: #ffffff;
+    --text: #16161a;
+    --sub: #5f6066;
+    --dim: #8a8b91;
+    --line: rgba(0, 0, 0, .10);
+    --soft: #f6f6f8;
+    --bubble: #e9f0ff;
+    --brand: #4d6bfe;
+    --brand-2: #8fa3ff;
+    --brand-3: #6c86ff;
+    --radius: 18px;
+    --shadow: 0 18px 48px rgba(23, 31, 61, .12);
+  }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #101013;
+    --panel: #1c1c21;
+    --text: #f2f2f5;
+    --sub: #a9aab2;
+    --dim: #7b7c84;
+    --line: rgba(255, 255, 255, .12);
+    --soft: #232329;
+    --bubble: #25304f;
+    --shadow: 0 18px 48px rgba(0, 0, 0, .55);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 32px 72px;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background .2s, color .2s;
+  }
+  header.top {
+    max-width: 1080px;
+    margin: 0 auto 28px;
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: -.01em; }
+  header.top p { margin: 4px 0 0; color: var(--sub); font-size: 13px; }
+  .spacer { flex: 1; }
+  button.toggle {
+    height: 32px;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: var(--panel);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  button.toggle:hover { background: var(--soft); }
+
+  .grid {
+    max-width: 1080px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: 40px 44px;
+  }
+  .lab { display: flex; flex-direction: column; gap: 12px; }
+  .lab-head { display: flex; align-items: baseline; gap: 8px; }
+  .lab-head h2 { margin: 0; font-size: 14px; font-weight: 650; }
+  .tag {
+    font-size: 11px;
+    line-height: 18px;
+    padding: 0 7px;
+    border-radius: 999px;
+    color: var(--brand);
+    background: color-mix(in srgb, var(--brand) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--brand) 26%, transparent);
+  }
+  .lab p { margin: 0; color: var(--sub); font-size: 12.5px; min-height: 36px; }
+  .stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px 6px;
+    border-radius: 16px;
+    background:
+      radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--brand) 5%, transparent), transparent 60%),
+      var(--soft);
+  }
+
+  /* ---------- the card itself ---------- */
+  .card {
+    position: relative;
+    width: 336px;
+    height: 470px;
+    border-radius: var(--radius);
+    background: var(--panel);
+    color: var(--text);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    isolation: isolate;
+  }
+  .card .hd {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 16px 12px;
+  }
+  .card .t { font-size: 14px; font-weight: 600; line-height: 20px; }
+  .card .s { font-size: 11.5px; color: var(--dim); line-height: 15px; margin-top: 1px; }
+  .card .x {
+    margin-left: auto; width: 26px; height: 26px; flex: none;
+    border: 0; border-radius: 7px; background: transparent;
+    color: var(--sub); font-size: 17px; line-height: 1; cursor: pointer;
+  }
+  .card .x:hover { background: color-mix(in srgb, var(--text) 7%, transparent); }
+  .card .bd { flex: 1; min-height: 0; overflow: hidden; padding: 12px 16px; display: flex; flex-direction: column; gap: 11px; }
+  .card .quote {
+    padding: 8px 11px; border-radius: 9px; background: var(--soft);
+    color: var(--sub); font-size: 12px; line-height: 18px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .card .a { font-size: 13px; line-height: 20px; color: var(--text); }
+  .card .q {
+    align-self: flex-end; max-width: 88%; padding: 7px 12px;
+    border-radius: 16px; background: var(--bubble); font-size: 13px; line-height: 20px;
+  }
+  .card .ft { padding: 10px 16px 6px; border-top: .5px solid var(--line); }
+  .card .inputwrap {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 5px 5px 11px; border-radius: 12px;
+    border: .5px solid var(--line); background: var(--panel);
+  }
+  .card .inp { flex: 1; color: var(--dim); font-size: 12.5px; }
+  .card .send {
+    height: 27px; padding: 0 12px; border: 0; border-radius: 8px;
+    background: var(--brand); color: #fff; font: inherit; font-size: 12px; cursor: pointer;
+  }
+  .card .note { padding: 0 16px 12px; color: var(--dim); font-size: 10.5px; line-height: 15px; }
+
+  /* ---------- A. rotating conic ring ---------- */
+  @property --qe-angle { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+  .v-ring::before {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    border-radius: calc(var(--radius) + 1.5px);
+    padding: 1.5px;
+    background: conic-gradient(from var(--qe-angle),
+      transparent 0deg,
+      transparent 38deg,
+      color-mix(in srgb, var(--brand) 55%, transparent) 78deg,
+      var(--brand) 112deg,
+      var(--brand-2) 148deg,
+      color-mix(in srgb, var(--brand) 25%, transparent) 188deg,
+      transparent 230deg,
+      transparent 360deg);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: qe-spin 3.6s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .v-ring::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border-radius: calc(var(--radius) + 4px);
+    background: conic-gradient(from var(--qe-angle),
+      transparent 0deg,
+      color-mix(in srgb, var(--brand) 22%, transparent) 90deg,
+      color-mix(in srgb, var(--brand-2) 26%, transparent) 150deg,
+      transparent 240deg);
+    filter: blur(10px);
+    opacity: .55;
+    animation: qe-spin 3.6s linear infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  @keyframes qe-spin { to { --qe-angle: 360deg; } }
+
+  /* ---------- B. travelling comet ---------- */
+  .v-comet { box-shadow: var(--shadow); }
+  .v-comet .edge {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    overflow: visible; pointer-events: none; border-radius: var(--radius);
+  }
+  .v-comet .edge .base { display: none; }
+  .v-comet .edge .comet {
+    fill: none; stroke: url(#cometGrad); stroke-width: 2; stroke-linecap: round;
+    filter: drop-shadow(0 0 5px color-mix(in srgb, var(--brand) 80%, transparent));
+    stroke-dasharray: 18 82;
+    animation: qe-travel 4.2s linear infinite;
+  }
+  @keyframes qe-travel { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -100; } }
+
+  /* ---------- C. breathing gradient ---------- */
+  .v-breath::before {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    border-radius: calc(var(--radius) + 1.5px);
+    padding: 1.5px;
+    background: linear-gradient(115deg,
+      color-mix(in srgb, var(--brand) 30%, transparent),
+      var(--brand),
+      var(--brand-2),
+      var(--brand-3),
+      color-mix(in srgb, var(--brand) 30%, transparent));
+    background-size: 300% 300%;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: qe-flow 7s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .v-breath { box-shadow: var(--shadow), 0 0 0 3px color-mix(in srgb, var(--brand) 6%, transparent); }
+  @keyframes qe-flow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* ---------- D. aurora halo ---------- */
+  .v-aurora::before {
+    content: "";
+    position: absolute;
+    inset: -7px;
+    border-radius: calc(var(--radius) + 7px);
+    background: conic-gradient(from 40deg,
+      color-mix(in srgb, var(--brand) 55%, transparent),
+      color-mix(in srgb, var(--brand-2) 65%, transparent),
+      color-mix(in srgb, var(--brand-3) 45%, transparent),
+      color-mix(in srgb, var(--brand) 55%, transparent));
+    filter: blur(12px);
+    opacity: .38;
+    animation: qe-aurora 9s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .v-aurora { box-shadow: var(--shadow); outline: 1px solid color-mix(in srgb, var(--brand) 35%, var(--line)); }
+  @keyframes qe-aurora {
+    0%, 100% { transform: rotate(0deg) scale(1); opacity: .32; }
+    50% { transform: rotate(180deg) scale(1.03); opacity: .5; }
+  }
+
+  footer.foot {
+    max-width: 1080px;
+    margin: 44px auto 0;
+    color: var(--sub);
+    font-size: 12.5px;
+    line-height: 1.7;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+  footer.foot code { font-size: 12px; background: var(--soft); padding: 1px 5px; border-radius: 5px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .v-ring::before, .v-ring::after, .v-comet .edge .comet,
+    .v-breath::before, .v-aurora::before { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>边框流光 · 4 个方案</h1>
+      <p>纯白面板 + logo 蓝（#4d6bfe）。悬停卡片可放大查看；右上角切换明暗主题。</p>
+    </div>
+    <div class="spacer"></div>
+    <button class="toggle" id="theme">切换到深色</button>
+  </header>
+
+  <div class="grid">
+    <!-- A -->
+    <section class="lab">
+      <div class="lab-head"><h2>A · 环绕流光</h2><span class="tag">推荐</span></div>
+      <p>一段蓝色光带沿边框匀速绕行，外圈带轻微辉光。最接近你说的「流动」。</p>
+      <div class="stage">
+        <div class="card v-ring">
+          <div class="hd"><div><div class="t">临时解释</div><div class="s">独立对话 · 不会影响主对话</div></div><button class="x">×</button></div>
+          <div class="bd">
+            <div class="quote">“Cordis 插件包”指的是用 Cordis 框架打包出来的插件产物。</div>
+            <div class="a">它把插件本体（入口、依赖、导出）和一层 bundle patch（补丁层）组合到一起，再被 DSH 的插件机制加载。</div>
+            <div class="q">cordis 是什么意思？</div>
+            <div class="a">Cordis 是一个 TypeScript 插件框架，强调依赖注入、作用域服务和生命周期管理。DSH 的插件运行时就是基于它构建的。</div>
+          </div>
+          <div class="ft"><div class="inputwrap"><div class="inp">继续追问（⌘/Ctrl+Enter 发送）</div><button class="send">追问</button></div></div>
+          <div class="note">关闭后这段对话即丢弃，不会写入主对话。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- B -->
+    <section class="lab">
+      <div class="lab-head"><h2>B · 彗星巡边</h2><span class="tag">已选 · 最终版</span></div>
+      <p>只保留一段巡回的蓝光，没有静态边框、没有上部分割线。面板只剩阴影和流动的光。</p>
+      <div class="stage">
+        <div class="card v-comet">
+          <svg class="edge" viewBox="0 0 336 470" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="cometGrad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#4d6bfe" stop-opacity="0"/>
+                <stop offset="55%" stop-color="#4d6bfe" stop-opacity=".9"/>
+                <stop offset="100%" stop-color="#8fa3ff" stop-opacity="1"/>
+              </linearGradient>
+            </defs>
+            <rect class="base" x="1" y="1" width="334" height="468" rx="17" pathLength="100"/>
+            <rect class="comet" x="1" y="1" width="334" height="468" rx="17" pathLength="100"/>
+          </svg>
+          <div class="hd"><div><div class="t">临时解释</div><div class="s">独立对话 · 不会影响主对话</div></div><button class="x">×</button></div>
+          <div class="bd">
+            <div class="quote">“Cordis 插件包”指的是用 Cordis 框架打包出来的插件产物。</div>
+            <div class="a">它把插件本体（入口、依赖、导出）和一层 bundle patch（补丁层）组合到一起，再被 DSH 的插件机制加载。</div>
+            <div class="q">cordis 是什么意思？</div>
+            <div class="a">Cordis 是一个 TypeScript 插件框架，强调依赖注入、作用域服务和生命周期管理。DSH 的插件运行时就是基于它构建的。</div>
+          </div>
+          <div class="ft"><div class="inputwrap"><div class="inp">继续追问（⌘/Ctrl+Enter 发送）</div><button class="send">追问</button></div></div>
+          <div class="note">关闭后这段对话即丢弃，不会写入主对话。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- C -->
+    <section class="lab">
+      <div class="lab-head"><h2>C · 呼吸渐变</h2><span class="tag">柔和</span></div>
+      <p>整圈边框在几种蓝色间缓慢流动，没有明确的「光点」，像呼吸。</p>
+      <div class="stage">
+        <div class="card v-breath">
+          <div class="hd"><div><div class="t">临时解释</div><div class="s">独立对话 · 不会影响主对话</div></div><button class="x">×</button></div>
+          <div class="bd">
+            <div class="quote">“Cordis 插件包”指的是用 Cordis 框架打包出来的插件产物。</div>
+            <div class="a">它把插件本体（入口、依赖、导出）和一层 bundle patch（补丁层）组合到一起，再被 DSH 的插件机制加载。</div>
+            <div class="q">cordis 是什么意思？</div>
+            <div class="a">Cordis 是一个 TypeScript 插件框架，强调依赖注入、作用域服务和生命周期管理。DSH 的插件运行时就是基于它构建的。</div>
+          </div>
+          <div class="ft"><div class="inputwrap"><div class="inp">继续追问（⌘/Ctrl+Enter 发送）</div><button class="send">追问</button></div></div>
+          <div class="note">关闭后这段对话即丢弃，不会写入主对话。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- D -->
+    <section class="lab">
+      <div class="lab-head"><h2>D · 极光晕</h2><span class="tag">氛围</span></div>
+      <p>不描边，而是在卡片外扩散一层模糊蓝光，缓慢旋转，夜间主题尤其明显。</p>
+      <div class="stage">
+        <div class="card v-aurora">
+          <div class="hd"><div><div class="t">临时解释</div><div class="s">独立对话 · 不会影响主对话</div></div><button class="x">×</button></div>
+          <div class="bd">
+            <div class="quote">“Cordis 插件包”指的是用 Cordis 框架打包出来的插件产物。</div>
+            <div class="a">它把插件本体（入口、依赖、导出）和一层 bundle patch（补丁层）组合到一起，再被 DSH 的插件机制加载。</div>
+            <div class="q">cordis 是什么意思？</div>
+            <div class="a">Cordis 是一个 TypeScript 插件框架，强调依赖注入、作用域服务和生命周期管理。DSH 的插件运行时就是基于它构建的。</div>
+          </div>
+          <div class="ft"><div class="inputwrap"><div class="inp">继续追问（⌘/Ctrl+Enter 发送）</div><button class="send">追问</button></div></div>
+          <div class="note">关闭后这段对话即丢弃，不会写入主对话。</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer class="foot">
+    落地时：颜色改用主题 token <code>--dsw-alias-brand-primary</code>，深色主题自动跟随；动画会在
+    <code>prefers-reduced-motion: reduce</code> 时关闭。A / C 用 <code>conic-gradient</code> + <code>mask-composite</code>；
+    B 是 SVG 描边 <code>stroke-dashoffset</code>；D 是模糊光晕。
+  </footer>
+
+<script>
+  const root = document.documentElement
+  const button = document.getElementById('theme')
+  const sync = () => {
+    const dark = root.getAttribute('data-theme') === 'dark'
+    button.textContent = dark ? '切换到浅色' : '切换到深色'
+  }
+  button.addEventListener('click', () => {
+    root.setAttribute('data-theme', root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark')
+    sync()
+  })
+  root.setAttribute('data-theme', 'light')
+  sync()
+</script>
+</body>
+</html>

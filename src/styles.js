@@ -4,11 +4,18 @@
  */
 export const CSS = `
 .qe-panel{position:fixed;z-index:92;width:min(400px,calc(100vw - 24px));max-height:min(560px,calc(100vh - 24px));
-  display:flex;flex-direction:column;overflow:hidden;border-radius:var(--dsw-radius-xl,16px);
-  background:var(--dsw-alias-bg-base,#fff);border:.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,.12));
-  box-shadow:var(--dsw-elevation-panel,0 8px 32px rgba(0,0,0,.12));
+  display:flex;flex-direction:column;overflow:visible;border-radius:var(--dsw-radius-xl,16px);
+  background:transparent;box-shadow:var(--dsw-elevation-panel,0 8px 32px rgba(0,0,0,.12));
   color:var(--dsw-alias-label-primary,#16161a);font-family:inherit;font-size:var(--dsh-content-font-size,14px);
   animation:qe-pop .14s cubic-bezier(.2,.8,.2,1)}
+.qe-inner{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-radius:inherit;
+  background:var(--dsw-alias-bg-base,#fff)}
+/* Comet border: one short lit segment travels the rounded edge; no static outline. */
+.qe-edge{position:absolute;inset:-4px;width:calc(100% + 8px);height:calc(100% + 8px);pointer-events:none;overflow:visible}
+.qe-comet{fill:none;stroke:url(#qe-comet-grad);stroke-width:2;stroke-linecap:round;stroke-dasharray:18 82;
+  animation:qe-travel 4.2s linear infinite;
+  filter:drop-shadow(0 0 6px color-mix(in srgb,var(--dsw-alias-brand-primary,#4d6bfe) 70%,transparent))}
+@keyframes qe-travel{from{stroke-dashoffset:0}to{stroke-dashoffset:-100}}
 @keyframes qe-pop{from{transform:scale(.97) translateY(4px);opacity:0}to{transform:none;opacity:1}}
 .qe-header{height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 16px}
 .qe-title{font-size:14px;font-weight:600;line-height:20px}
@@ -66,5 +73,5 @@ export const CSS = `
   font:inherit;font-size:12px;line-height:1;cursor:pointer;user-select:none}
 .qe-chip:hover{background:var(--dsw-alias-button-floating-hover,var(--dsw-alias-bg-layer-2,#f2f2f4))}
 .qe-chip svg{color:var(--dsw-alias-brand-primary,#4d6bfe)}
-@media (prefers-reduced-motion:reduce){.qe-panel{animation:none}.qe-dot{animation:none;opacity:.55}}
+@media (prefers-reduced-motion:reduce){.qe-panel{animation:none}.qe-dot{animation:none;opacity:.55}.qe-comet{animation:none;stroke-dashoffset:-40}}
 `

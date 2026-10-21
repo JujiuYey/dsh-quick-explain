@@ -36,6 +36,35 @@ export default function App() {
     setQuote('')
   }, [thread])
 
+  // Dismiss the card as soon as the user interacts with the rest of the app:
+  // another conversation in the sidebar, a plugin page, the composer, or Esc.
+  // Clicks inside our own UI (panel, chip) are left alone.
+  const closeRef = React.useRef(close)
+  React.useEffect(() => { closeRef.current = close })
+  React.useEffect(() => {
+    if (!open) return undefined
+    const dismiss = () => closeRef.current()
+    const onPointerDown = (event) => {
+      const target = event.target
+      if (target instanceof Element && target.closest('[data-quick-explain-ui]')) return
+      dismiss()
+    }
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') dismiss()
+    }
+    const onNavigate = () => dismiss()
+    document.addEventListener('pointerdown', onPointerDown, true)
+    document.addEventListener('keydown', onKeyDown, true)
+    window.addEventListener('popstate', onNavigate)
+    window.addEventListener('hashchange', onNavigate)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown, true)
+      document.removeEventListener('keydown', onKeyDown, true)
+      window.removeEventListener('popstate', onNavigate)
+      window.removeEventListener('hashchange', onNavigate)
+    }
+  }, [open])
+
   return (
     <>
       <style>{CSS}</style>
