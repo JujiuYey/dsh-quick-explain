@@ -18,7 +18,6 @@ const IDLE_TTL_MS = 30 * 60 * 1000
 const SWEEP_MS = 60 * 1000
 const MAX_QUOTE = 4000
 const MAX_CONTEXT = 4000
-const MAX_TOKENS = 4096
 const MAX_HISTORY = 12
 
 const SYSTEM = [
@@ -116,8 +115,8 @@ export function apply(ctx, config = {}) {
     try {
       const route = await resolveRoute()
       const effort = await lowestEffort(route)
-      // A budget spent entirely on thinking yields an empty answer; retry wider
-      // once, with an explicit "final text only" instruction appended.
+      // No output budget: reasoning models need room for both thinking and the
+      // answer. Retry once with an explicit final-text nudge if it comes back empty.
       const NUDGE = '\n\n(Your previous reply came back empty. Reply with the final answer text only — no reasoning, no preamble.)'
       for (let attempt = 0; attempt < 2; attempt += 1) {
         thread.text = ''
@@ -135,7 +134,6 @@ export function apply(ctx, config = {}) {
           ...(effort === undefined ? {} : { reasoningEffort: effort }),
           system: SYSTEM,
           messages,
-          maxTokens: attempt === 0 ? MAX_TOKENS : MAX_TOKENS * 2,
           signal: controller.signal,
         })) {
           if (chunk.type === 'text-delta') thread.text += chunk.text
