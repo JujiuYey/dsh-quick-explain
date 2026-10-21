@@ -106,5 +106,3 @@ npm run build # regenerate client.js
 ## License
 
 [MIT](LICENSE) © 2026 JujiuYey
-
-The sparkles glyph used by the selection chip and the plugin icon is from [Lucide](https://lucide.dev) (ISC License).
