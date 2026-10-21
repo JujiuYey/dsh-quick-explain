@@ -31,13 +31,13 @@ Sometimes you need to understand one word, one acronym, or one sentence in the m
 
 In DSH Desktop: open the **Plugins** page (sidebar, or Settings → Plugins) → **Add plugin**:
 
-- **GitHub**: `JujiuYey/dsh-quick-explain`
-- or **Tarball**: a `.tgz` built from this repository (`npm pack`)
+- **Tarball**: a `.tgz` downloaded from npm (`npm pack dsh-quick-explain`) or built from this repository (`npm pack`)
 
 From a shell (for a profile the app does not reserve):
 
 ```sh
-dsh plugin --profile <profile> add github:JujiuYey/dsh-quick-explain
+npm pack dsh-quick-explain
+dsh plugin --profile <profile> add ./dsh-quick-explain-<version>.tgz
 ```
 
 The Desktop `desktop` profile is owned by the Electron app — quit it fully before using the CLI, or install through the Plugins page.
