@@ -31,15 +31,10 @@
 
 DSH Desktop：打开 **Plugins** 页面（侧边栏，或 设置 → 插件）→ **Add plugin**：
 
-- **Tarball**：用从 npm 下载的 `.tgz`（`npm pack dsh-quick-explain`），或本仓库 `npm pack` 打出的包
+1. 在 **Package name or address** 填 `dsh-quick-explain`。
+2. 点 **Install**，然后 **Enable now**。如果 DSH 提示重启生效，请完全退出应用再打开。
 
-命令行（适用于非应用托管的 profile）：
-
-```sh
-dsh plugin --profile <profile> add dsh-quick-explain
-```
-
-Desktop 的 `desktop` profile 由 Electron 应用独占管理：用 CLI 前请先完全退出应用，或者直接用插件页面安装。
+如果 npm 访问不了，也可以改填 `.tgz` 的完整路径（`npm pack dsh-quick-explain` 打包下载），或 `github:JujiuYey/dsh-quick-explain`。
 
 ## 使用
 

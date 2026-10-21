@@ -31,15 +31,10 @@ Sometimes you need to understand one word, one acronym, or one sentence in the m
 
 In DSH Desktop: open the **Plugins** page (sidebar, or Settings → Plugins) → **Add plugin**:
 
-- **Tarball**: a `.tgz` downloaded from npm (`npm pack dsh-quick-explain`) or built from this repository (`npm pack`)
+1. In **Package name or address**, enter `dsh-quick-explain`.
+2. Select **Install**, then **Enable now**. If DSH says the change takes effect at the next start, quit DSH completely and open it again.
 
-From a shell (for a profile the app does not reserve):
-
-```sh
-dsh plugin --profile <profile> add dsh-quick-explain
-```
-
-The Desktop `desktop` profile is owned by the Electron app — quit it fully before using the CLI, or install through the Plugins page.
+If npm is not reachable, you can instead enter the full path of a `.tgz` (`npm pack dsh-quick-explain`), or `github:JujiuYey/dsh-quick-explain`.
 
 ## Usage
 
