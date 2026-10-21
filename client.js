@@ -18,7 +18,7 @@ window.__ModuleLoader__.load({
     // Follow the language DSH itself applies to <html lang>, not the OS default.
     const COPY = {
       zh: {
-        chip: '💡 解释',
+        chip: '解释',
         chipLabel: '解释选中的内容',
         title: '临时解释',
         subtitle: '独立对话 · 不会影响主对话',
@@ -33,7 +33,7 @@ window.__ModuleLoader__.load({
         empty: '模型这次只输出了思考过程，没有给出回答，请重试一次。',
       },
       en: {
-        chip: '💡 Explain',
+        chip: 'Explain',
         chipLabel: 'Explain the selected text',
         title: 'Quick explain',
         subtitle: 'Separate chat · the main conversation is untouched',
@@ -247,6 +247,27 @@ window.__ModuleLoader__.load({
         fontSize: 11,
         lineHeight: '16px',
       },
+    }
+
+    // Sparkles glyph from Lucide (ISC), stroke inherits the button's color.
+    function SparkleIcon() {
+      return h('svg', {
+        width: 14,
+        height: 14,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 2,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': true,
+        style: { display: 'block', flex: '0 0 auto', color: token.brand },
+      },
+        h('path', { key: 'a', d: 'M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z' }),
+        h('path', { key: 'b', d: 'M20 2v4' }),
+        h('path', { key: 'c', d: 'M22 4h-4' }),
+        h('circle', { key: 'd', cx: 4, cy: 20, r: 2 }),
+      )
     }
 
     // Minimal inline Markdown: **bold** and `code`. Everything else stays literal text.
@@ -467,7 +488,7 @@ window.__ModuleLoader__.load({
             top: Math.max(10, chip.y - 42),
             left: Math.max(8, Math.min(window.innerWidth - 84, chip.x - 34)),
           },
-        }, copy.chip))
+        }, h(React.Fragment, null, h(SparkleIcon, { key: 'icon' }), h('span', { key: 'label' }, copy.chip))))
       }
 
       if (open) {

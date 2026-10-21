@@ -99,3 +99,5 @@ Host 半边（`index.js`）是无构建步骤的 ESM；Client 半边（`client.j
 ## 许可证
 
 [MIT](LICENSE) © 2026 JujiuYey
+
+选区按钮与插件图标使用的 sparkles 图形来自 [Lucide](https://lucide.dev)（ISC 许可）。

@@ -1,6 +1,6 @@
 {
   "name": "dsh-quick-explain",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Select a fragment of a chat and open a temporary side conversation that explains it — without touching the main session. A DeepSeek Harness (dsh) plugin.",
   "keywords": [
     "dsh-plugin",

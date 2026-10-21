@@ -99,3 +99,5 @@ The selected text, the paragraph around it, and your follow-up questions are sen
 ## License
 
 [MIT](LICENSE) © 2026 JujiuYey
+
+The sparkles glyph used by the selection chip and the plugin icon is from [Lucide](https://lucide.dev) (ISC License).
