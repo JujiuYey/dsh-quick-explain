@@ -1,0 +1,59 @@
+{
+  "name": "dsh-quick-explain",
+  "version": "1.0.0",
+  "description": "Select a fragment of a chat and open a temporary side conversation that explains it — without touching the main session. A DeepSeek Harness (dsh) plugin.",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh",
+    "deepseek",
+    "explain",
+    "selection",
+    "side-chat",
+    "aside",
+    "quick-explain"
+  ],
+  "homepage": "https://github.com/JujiuYey/dsh-quick-explain#readme",
+  "bugs": {
+    "url": "https://github.com/JujiuYey/dsh-quick-explain/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JujiuYey/dsh-quick-explain.git"
+  },
+  "author": "JujiuYey",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-llm": "*"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout"
+      ]
+    }
+  }
+}

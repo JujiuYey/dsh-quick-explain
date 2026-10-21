@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Quick Explain",
+    "description": "Select a fragment of a chat and open a temporary side conversation that explains it. The side chat never writes to the main session and is discarded when closed."
+  }
+}

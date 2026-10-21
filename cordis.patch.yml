@@ -1,0 +1,4 @@
+- insert:
+    - id: quick-explain
+      name: dsh-quick-explain
+      config: {}
