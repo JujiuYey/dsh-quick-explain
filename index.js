@@ -121,6 +121,7 @@ export function apply(ctx, config = {}) {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         thread.text = ''
         finish = undefined
+        const chunkTypes = {}
         const base = thread.messages
         const messages = attempt === 0 ? base : (() => {
           const last = base.at(-1)
@@ -128,6 +129,7 @@ export function apply(ctx, config = {}) {
           const text = (last.content?.at(-1)?.text ?? '') + NUDGE
           return [...base.slice(0, -1), { ...last, content: [{ type: 'text', text }] }]
         })()
+        console.debug(`[quick-explain] run: attempt=${attempt} route=${route.provider}/${route.model} effort=${JSON.stringify(effort)} turns=${messages.length}`)
         for await (const chunk of ctx.llm.stream({
           provider: route.provider,
           model: route.model,
@@ -136,9 +138,11 @@ export function apply(ctx, config = {}) {
           messages,
           signal: controller.signal,
         })) {
+          chunkTypes[chunk.type] = (chunkTypes[chunk.type] ?? 0) + 1
           if (chunk.type === 'text-delta') thread.text += chunk.text
           else if (chunk.type === 'finish') finish = chunk
         }
+        console.debug(`[quick-explain] run: attempt=${attempt} done chunks=${JSON.stringify(chunkTypes)} finish=${JSON.stringify(finish)} textLen=${thread.text.length}`)
         if (finish?.kind === 'error' || finish?.kind === 'aborted') break
         if (thread.text.trim() !== '') break
       }
