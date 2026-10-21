@@ -4,8 +4,15 @@ import { Thinking } from './Thinking.jsx'
 import { RichAnswer } from './RichAnswer.jsx'
 import { Composer } from './Composer.jsx'
 
-/** The right-edge sheet: quote, turns, error/retry, composer, footer. */
-export function Panel({ copy, quote, turns, busy, error, canRetry, draft, scrollRef, onChange, onAsk, onRetry, onClose }) {
+/** The floating card: quote, turns, error/retry, composer, footer. */
+export function Panel({ copy, at, quote, turns, busy, error, canRetry, draft, scrollRef, onChange, onAsk, onRetry, onClose }) {
+  // Pop up next to the selection; flip to the left when there is no room on the right.
+  const width = Math.min(400, window.innerWidth - 24)
+  const maxHeight = Math.min(560, window.innerHeight - 24)
+  let left = at.x + 16
+  if (left + width > window.innerWidth - 12) left = Math.max(12, at.x - width - 16)
+  const top = Math.min(Math.max(at.y - 32, 12), Math.max(12, window.innerHeight - maxHeight - 12))
+
   const body = []
   turns.forEach((turn, index) => {
     if (turn.q !== null && turn.q !== undefined) {
@@ -24,6 +31,7 @@ export function Panel({ copy, quote, turns, busy, error, canRetry, draft, scroll
       data-quick-explain-ui={true}
       role="dialog"
       aria-label={copy.title}
+      style={{ left, top, maxHeight }}
       onKeyDown={(event) => { if (event.key === 'Escape') onClose() }}
     >
       <header className="qe-header">

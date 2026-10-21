@@ -13,6 +13,7 @@ export default function App() {
   const [chip, setChip] = useSelectionChip()
   const [open, setOpen] = React.useState(false)
   const [quote, setQuote] = React.useState('')
+  const [at, setAt] = React.useState(null)
   const thread = useThread(copy)
   const scrollRef = React.useRef(null)
 
@@ -25,6 +26,7 @@ export default function App() {
     thread.begin(selection)
     setChip(null)
     setOpen(true)
+    setAt({ x: selection.x, y: selection.y })
     setQuote(selection.text)
   }, [thread, setChip])
 
@@ -41,6 +43,7 @@ export default function App() {
       {open && (
         <Panel
           copy={copy}
+          at={at ?? { x: window.innerWidth / 2, y: 120 }}
           quote={quote}
           turns={thread.turns}
           busy={thread.busy}

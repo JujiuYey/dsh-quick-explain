@@ -3,11 +3,13 @@
  * and every value comes from a DSH theme token so light/dark follow the app.
  */
 export const CSS = `
-.qe-panel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:92;display:flex;flex-direction:column;
-  background:var(--dsw-alias-bg-base,#fff);border-left:.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,.12));
+.qe-panel{position:fixed;z-index:92;width:min(400px,calc(100vw - 24px));max-height:min(560px,calc(100vh - 24px));
+  display:flex;flex-direction:column;overflow:hidden;border-radius:var(--dsw-radius-xl,16px);
+  background:var(--dsw-alias-bg-base,#fff);border:.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,.12));
+  box-shadow:var(--dsw-elevation-panel,0 8px 32px rgba(0,0,0,.12));
   color:var(--dsw-alias-label-primary,#16161a);font-family:inherit;font-size:var(--dsh-content-font-size,14px);
-  animation:qe-slide .16s cubic-bezier(.2,.8,.2,1)}
-@keyframes qe-slide{from{transform:translateX(14px);opacity:0}to{transform:none;opacity:1}}
+  animation:qe-pop .14s cubic-bezier(.2,.8,.2,1)}
+@keyframes qe-pop{from{transform:scale(.97) translateY(4px);opacity:0}to{transform:none;opacity:1}}
 .qe-header{height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 16px;
   border-bottom:.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,.12))}
 .qe-title{font-size:14px;font-weight:600;line-height:20px}
