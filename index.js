@@ -134,7 +134,6 @@ export function apply(ctx, config = {}) {
         }
         if (finish?.kind === 'error' || finish?.kind === 'aborted') break
         if (thread.text.trim() !== '') break
-        if (finish?.kind !== 'max-tokens') break
       }
     } catch (error) {
       if (controller.signal.aborted) {

@@ -1,4 +1,6 @@
 import React from 'react'
+import { SendIcon } from './icons.jsx'
+
 export function Composer({ copy, draft, busy, onChange, onAsk }) {
   const onKeyDown = (event) => {
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
@@ -18,14 +20,18 @@ export function Composer({ copy, draft, busy, onChange, onAsk }) {
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={onKeyDown}
         />
-        <button
-          type="button"
-          className="qe-send"
-          onClick={onAsk}
-          disabled={busy || draft.trim() === ''}
-        >
-          {copy.send}
-        </button>
+        <div className="qe-sendrow">
+          <button
+            type="button"
+            className="qe-send"
+            onClick={onAsk}
+            disabled={busy || draft.trim() === ''}
+            aria-label={copy.send}
+            title={copy.send}
+          >
+            <SendIcon />
+          </button>
+        </div>
       </div>
     </div>
   )
