@@ -42,6 +42,7 @@ function createThread(id, quote, context) {
     state: 'thinking',
     text: '',
     error: undefined,
+    errorCode: undefined,
     controller: undefined,
     updatedAt: Date.now(),
   }
@@ -107,6 +108,7 @@ export function apply(ctx, config = {}) {
     thread.state = 'thinking'
     thread.text = ''
     thread.error = undefined
+    thread.errorCode = undefined
     thread.updatedAt = Date.now()
     const controller = new AbortController()
     thread.controller = controller
@@ -140,11 +142,13 @@ export function apply(ctx, config = {}) {
         return
       }
       thread.state = 'error'
+      thread.errorCode = 'INTERNAL'
       thread.error = error?.message ?? String(error)
       return
     }
     if (finish?.kind === 'error') {
       thread.state = 'error'
+      thread.errorCode = finish.failure?.code
       thread.error = finish.failure?.message ?? '模型调用失败'
       return
     }
@@ -155,6 +159,7 @@ export function apply(ctx, config = {}) {
     const text = thread.text.trim()
     if (text === '') {
       thread.state = 'error'
+      thread.errorCode = 'EMPTY_RESPONSE'
       thread.error = '模型这次只输出了思考过程，没有给出回答，请重试一次。'
       return
     }
@@ -189,7 +194,13 @@ export function apply(ctx, config = {}) {
         if (thread.state === 'thinking') fail('上一个回答还在生成中。', 'explain/busy')
         const question = String(payload?.question ?? '').trim()
         if (question === '') fail('问题是空的。', 'explain/invalid')
-        thread.messages.push({ role: 'user', content: [{ type: 'text', text: question }] })
+        const last = thread.messages.at(-1)
+        if (last?.role === 'user' && thread.messages.length > 1) {
+          // Retry of a failed turn: replace it instead of stacking user messages.
+          last.content = [{ type: 'text', text: question }]
+        } else {
+          thread.messages.push({ role: 'user', content: [{ type: 'text', text: question }] })
+        }
         trimHistory(thread)
         void run(thread)
         return true
@@ -201,6 +212,7 @@ export function apply(ctx, config = {}) {
           state: thread.state,
           text: thread.text,
           error: thread.error,
+          errorCode: thread.errorCode,
         }
       }
       case 'close': {

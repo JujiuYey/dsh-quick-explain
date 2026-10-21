@@ -20,6 +20,7 @@
 - **可以追问**：在面板里继续问，问题只留在临时对话里。
 - **对主会话零影响**：不追加任何会话事件、不新增消息、不改变主对话的模型请求。
 - **用你自己的模型**：通过 DSH 的 `ctx.llm.stream` 和你配置的默认模型调用。
+- **原生外观**：面板是贴在右侧的整高面板，颜色、0.5px 细线、圆角、字号和动效全部取自 DSH 自己的主题 token，看起来是应用的一部分，而不是一张第三方卡片。
 - **设计上可丢弃**：关闭面板或闲置 30 分钟后，临时对话从 Host 内存中删除。
 - **纯本地**：面板只访问你正在运行的 DSH 进程内的路由，没有额外服务、没有遥测。
 
@@ -78,7 +79,7 @@ index.js: 内存中新建 thread → ctx.llm.stream(...)
 把本目录作为 **Local directory** bundle 安装，修改后重启 DSH 以加载新的客户端代码：
 
 ```sh
-npm pack            # 生成 dsh-quick-explain-1.0.0.tgz
+npm pack            # 生成 dsh-quick-explain-<version>.tgz
 ```
 
 Host 半边（`index.js`）是无构建步骤的 ESM；Client 半边（`client.js`）是向 `window.__ModuleLoader__` 注册懒加载工厂的普通脚本。

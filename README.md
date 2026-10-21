@@ -20,6 +20,7 @@ Sometimes you need to understand one word, one acronym, or one sentence in the m
 - **Follow-up questions.** Keep digging in the panel; each question stays in the side conversation.
 - **Zero impact on the main session.** Nothing is appended to the session log, no message is added to the conversation, and the main model request is untouched.
 - **Uses your own model.** The side calls go through DSH's own `ctx.llm.stream` with your configured default model.
+- **Native chrome.** The panel is a right-edge sheet built from DSH's own theme tokens — same hairlines, radii, type scale and motion — so it reads as part of the app instead of a third-party card.
 - **Disposable by design.** Closing the panel, or 30 minutes of inactivity, drops the side conversation from host memory.
 - **Local only.** The panel talks to a route inside your running DSH process; no extra service, no telemetry.
 
@@ -78,7 +79,7 @@ The main conversation's Session is not part of this path. The side conversation 
 Install this directory as a **Local directory** bundle, edit, then restart DSH to load changed client code:
 
 ```sh
-npm pack            # produces dsh-quick-explain-1.0.0.tgz
+npm pack            # produces dsh-quick-explain-<version>.tgz
 ```
 
 or point the plugin manager at the checkout. The Host half (`index.js`) is plain ESM with no build step; the Client half (`client.js`) is a plain script that registers a lazy factory with `window.__ModuleLoader__`.

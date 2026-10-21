@@ -1,10 +1,14 @@
 /**
  * Client half of Quick Explain.
  *
- * It watches text selections in the page and, when the user asks, opens a small
- * side panel that talks to the Host plugin through /api/quick-explain.
+ * It watches text selections in the page and, when the user asks, opens a side
+ * panel that talks to the Host plugin through /api/quick-explain.
  * Nothing here writes to the main Session: the panel is a separate, disposable
  * conversation rendered above the app.
+ *
+ * Styling deliberately borrows the app's own vocabulary — the same DESIGN tokens,
+ * 0.5px hairlines and 14/22 content rhythm the transcript and composer use — so the
+ * panel reads as part of DSH rather than a floating third-party card.
  */
 window.__ModuleLoader__.load({
   id: 'dsh-quick-explain',
@@ -15,6 +19,7 @@ window.__ModuleLoader__.load({
     const ROUTE = '/api/quick-explain'
     const MAX_SELECTION = 1200
     const MAX_CONTEXT = 2000
+
     // Follow the language DSH itself applies to <html lang>, not the OS default.
     const COPY = {
       zh: {
@@ -23,14 +28,15 @@ window.__ModuleLoader__.load({
         title: '临时解释',
         subtitle: '独立对话 · 不会影响主对话',
         close: '关闭',
-        thinking: '正在思考…',
+        thinking: '正在思考',
         placeholderBusy: '正在生成…',
         placeholder: '继续追问（⌘/Ctrl+Enter 发送）',
         send: '追问',
+        retry: '重试',
         footer: '关闭后这段对话即丢弃，不会写入主对话。',
         cancelled: '已取消。',
         failed: '生成失败',
-        empty: '模型这次只输出了思考过程，没有给出回答，请重试一次。',
+        empty: '模型这次只输出了思考过程，没有给出回答，换一段或再试一次通常就好。',
       },
       en: {
         chip: 'Explain',
@@ -38,16 +44,84 @@ window.__ModuleLoader__.load({
         title: 'Quick explain',
         subtitle: 'Separate chat · the main conversation is untouched',
         close: 'Close',
-        thinking: 'Thinking…',
+        thinking: 'Thinking',
         placeholderBusy: 'Generating…',
         placeholder: 'Ask a follow-up (Cmd/Ctrl+Enter to send)',
         send: 'Ask',
+        retry: 'Retry',
         footer: 'Closing discards this chat; nothing is written to the main conversation.',
         cancelled: 'Cancelled.',
         failed: 'Generation failed',
-        empty: 'The model only produced reasoning this time. Please try again.',
+        empty: 'The model only produced reasoning this time. Retry, or pick another model in settings.',
       },
     }
+
+    // One stylesheet for the whole surface: hover, focus and motion need real CSS,
+    // and every value comes from a DSH theme token so light/dark follow the app.
+    const CSS = `
+.qe-panel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);z-index:92;display:flex;flex-direction:column;
+  background:var(--dsw-alias-bg-base,#fff);border-left:.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,.12));
+  color:var(--dsw-alias-label-primary,#16161a);font-family:inherit;font-size:var(--dsh-content-font-size,14px);
+  animation:qe-slide .16s cubic-bezier(.2,.8,.2,1)}
+@keyframes qe-slide{from{transform:translateX(14px);opacity:0}to{transform:none;opacity:1}}
+.qe-header{height:52px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 16px;
+  border-bottom:.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,.12))}
+.qe-title{font-size:14px;font-weight:600;line-height:20px}
+.qe-sub{font-size:12px;line-height:16px;margin-top:1px;color:var(--dsw-alias-label-tertiary,#8a8b91)}
+.qe-iconbtn{margin-left:auto;width:28px;height:28px;flex:none;padding:0;border:0;border-radius:var(--dsw-radius-sm,6px);
+  background:transparent;color:var(--dsw-alias-label-secondary,#5f6066);display:grid;place-items:center;cursor:pointer}
+.qe-iconbtn:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06))}
+.qe-iconbtn:focus-visible,.qe-chip:focus-visible,.qe-send:focus-visible,.qe-retry:focus-visible{
+  outline:calc(var(--dsw-focus-ring-width,1.5px)) solid var(--dsw-focus-ring-color,var(--dsw-alias-state-business-primary,#4d6bfe));
+  outline-offset:1px}
+.qe-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:14px}
+.qe-quote{flex:none;max-height:120px;overflow-y:auto;padding:8px 12px;border-radius:var(--dsw-radius-md,8px);
+  background:var(--dsw-alias-bg-layer-1,#f6f6f8);color:var(--dsw-alias-label-secondary,#5f6066);
+  font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));
+  white-space:pre-wrap;word-break:break-word}
+.qe-q{align-self:flex-end;max-width:88%;padding:8px 14px;border-radius:var(--dsw-radius-xl,16px);
+  background:var(--dsw-specific-bubble,#e9f0ff);color:var(--dsw-alias-label-primary,#16161a);
+  font-size:var(--dsh-content-font-size,14px);line-height:calc(22px + var(--dsh-content-font-delta,0px));
+  white-space:pre-wrap;word-break:break-word}
+.qe-a{font-size:var(--dsh-content-font-size,14px);line-height:calc(22px + var(--dsh-content-font-delta,0px));
+  white-space:pre-wrap;word-break:break-word;color:var(--dsw-alias-label-primary,#16161a)}
+.qe-code{font-family:var(--dsw-font-family-mono,ui-monospace,SFMono-Regular,Menlo,Consolas,monospace);font-size:.92em;
+  padding:1px 4px;border-radius:4px;background:var(--dsw-alias-markdown-code-block,var(--dsw-alias-bg-layer-1,#f2f2f4))}
+.qe-think{display:flex;align-items:center;gap:6px;color:var(--dsw-alias-label-tertiary,#8a8b91);
+  font-size:var(--dsh-content-font-size-secondary,13px);line-height:20px}
+.qe-dots{display:inline-flex;align-items:center;gap:3px}
+.qe-dot{width:4px;height:4px;border-radius:50%;background:currentColor;animation:qe-bounce 1.1s infinite ease-in-out}
+.qe-dot:nth-child(2){animation-delay:.14s}
+.qe-dot:nth-child(3){animation-delay:.28s}
+@keyframes qe-bounce{0%,80%,100%{opacity:.25;transform:translateY(0)}35%{opacity:1;transform:translateY(-3px)}}
+.qe-error{display:flex;align-items:center;gap:10px;flex-wrap:wrap;color:var(--dsw-alias-state-error-primary,#c9433d);
+  font-size:var(--dsh-content-font-size-secondary,13px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px))}
+.qe-retry{height:26px;padding:0 10px;border:.5px solid var(--dsw-alias-border-l2,rgba(0,0,0,.1));
+  border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-bg-layer-1,#f6f6f8);
+  color:var(--dsw-alias-label-primary,#16161a);font:inherit;font-size:12px;cursor:pointer}
+.qe-retry:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,.06))}
+.qe-composer{flex:none;padding:10px 16px 12px;border-top:.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,.12))}
+.qe-inputwrap{display:flex;align-items:flex-end;gap:8px;padding:6px 6px 6px 12px;overflow:hidden;
+  background:var(--dsw-specific-input-major,#fff);border:.5px solid var(--dsw-alias-border-l2,rgba(0,0,0,.1));
+  border-radius:var(--dsw-radius-lg,12px);box-shadow:var(--dsw-elevation-soft,0 4px 16px rgba(0,0,0,.04))}
+.qe-input{flex:1 1 auto;min-height:32px;max-height:132px;padding:4px 0;resize:none;border:0;outline:none;
+  background:transparent;color:var(--dsw-alias-label-primary,#16161a);font:inherit;
+  font-size:var(--dsh-content-font-size,14px);line-height:calc(22px + var(--dsh-content-font-delta,0px))}
+.qe-input::placeholder{color:var(--dsw-alias-label-tertiary,#8a8b91)}
+.qe-send{flex:none;height:30px;padding:0 14px;border:0;border-radius:var(--dsw-radius-md,8px);
+  background:var(--dsw-alias-button-primary-fill,var(--dsw-alias-brand-primary,#4d6bfe));
+  color:var(--dsw-alias-label-primary-foreground,#fff);font:inherit;font-size:13px;font-weight:500;cursor:pointer}
+.qe-send:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary,#3b58e0))}
+.qe-send:disabled{background:var(--dsw-alias-button-primary-dimmed,#e6e9f2);color:var(--dsw-alias-label-dimmed,#9a9ba2);cursor:default}
+.qe-footer{flex:none;padding:0 16px 12px;color:var(--dsw-alias-label-tertiary,#8a8b91);font-size:11.5px;line-height:16px}
+.qe-chip{position:fixed;z-index:90;display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;
+  border:0;border-radius:100px;background:var(--dsw-alias-button-floating-fill,var(--dsw-specific-input-major,#fff));
+  color:var(--dsw-alias-label-primary,#16161a);box-shadow:var(--dsw-elevation-panel,0 3px 8px rgba(0,0,0,.08));
+  font:inherit;font-size:12px;line-height:1;cursor:pointer;user-select:none}
+.qe-chip:hover{background:var(--dsw-alias-button-floating-hover,var(--dsw-alias-bg-layer-2,#f2f2f4))}
+.qe-chip svg{color:var(--dsw-alias-brand-primary,#4d6bfe)}
+@media (prefers-reduced-motion:reduce){.qe-panel{animation:none}.qe-dot{animation:none;opacity:.55}}
+`
 
     function useIsZh() {
       const read = () => String(document.documentElement.lang || navigator.language || '')
@@ -60,18 +134,6 @@ window.__ModuleLoader__.load({
         return () => observer.disconnect()
       }, [])
       return isZh
-    }
-
-    const token = {
-      panel: 'var(--dsw-alias-bg-layer-2, #ffffff)',
-      soft: 'var(--dsw-alias-bg-layer-1, #f6f6f8)',
-      border: 'var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.12))',
-      text: 'var(--dsw-alias-label-primary, #16161a)',
-      sub: 'var(--dsw-alias-label-secondary, #5f6066)',
-      dim: 'var(--dsw-alias-label-tertiary, #8a8b91)',
-      brand: 'var(--dsw-alias-brand-primary, #4d6bfe)',
-      bubble: 'var(--dsw-alias-bg-mask-1, rgba(0, 0, 0, 0.05))',
-      danger: 'var(--dsw-alias-state-warn-label, #d24b45)',
     }
 
     async function call(endpoint, payload) {
@@ -101,154 +163,6 @@ window.__ModuleLoader__.load({
       }
     }
 
-    const styles = {
-      chip: {
-        position: 'fixed',
-        zIndex: 90,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '5px 10px',
-        borderRadius: 8,
-        border: `1px solid ${token.border}`,
-        background: token.panel,
-        color: token.text,
-        fontSize: 12,
-        lineHeight: '18px',
-        fontFamily: 'inherit',
-        cursor: 'pointer',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.14)',
-        userSelect: 'none',
-      },
-      panel: {
-        position: 'fixed',
-        right: 12,
-        top: 'calc(var(--dsh-frame-overlay-top, 68px) + 4px)',
-        bottom: 16,
-        width: 384,
-        maxWidth: 'calc(100vw - 24px)',
-        zIndex: 91,
-        display: 'flex',
-        flexDirection: 'column',
-        borderRadius: 14,
-        border: `1px solid ${token.border}`,
-        background: token.panel,
-        color: token.text,
-        boxShadow: '0 18px 48px rgba(0, 0, 0, 0.22)',
-        overflow: 'hidden',
-        fontFamily: 'inherit',
-        fontSize: 13.5,
-      },
-      header: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 8,
-        padding: '12px 14px 10px',
-        borderBottom: `1px solid ${token.border}`,
-      },
-      title: { fontSize: 14, fontWeight: 600, lineHeight: '20px' },
-      subtitle: { fontSize: 11.5, color: token.sub, lineHeight: '16px', marginTop: 1 },
-      closeButton: {
-        marginLeft: 'auto',
-        border: 'none',
-        background: 'transparent',
-        color: token.sub,
-        cursor: 'pointer',
-        fontSize: 18,
-        lineHeight: '20px',
-        padding: '0 2px',
-        borderRadius: 6,
-        fontFamily: 'inherit',
-      },
-      quote: {
-        margin: '10px 14px 0',
-        padding: '8px 10px',
-        borderLeft: `3px solid ${token.brand}`,
-        background: token.soft,
-        color: token.sub,
-        borderRadius: 6,
-        fontSize: 12,
-        lineHeight: '18px',
-        whiteSpace: 'pre-wrap',
-        maxHeight: 108,
-        overflowY: 'auto',
-        flex: '0 0 auto',
-      },
-      body: {
-        flex: '1 1 auto',
-        minHeight: 0,
-        overflowY: 'auto',
-        padding: '10px 14px 12px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 10,
-      },
-      question: {
-        alignSelf: 'flex-end',
-        maxWidth: '92%',
-        padding: '6px 10px',
-        borderRadius: 10,
-        background: token.bubble,
-        whiteSpace: 'pre-wrap',
-        lineHeight: 1.55,
-      },
-      answer: {
-        whiteSpace: 'pre-wrap',
-        lineHeight: 1.62,
-      },
-      think: { color: token.dim, lineHeight: 1.6 },
-      code: {
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-        fontSize: '0.92em',
-        background: token.bubble,
-        borderRadius: 4,
-        padding: '1px 4px',
-      },
-      blank: { height: 6 },
-      error: { color: token.danger, lineHeight: 1.55, whiteSpace: 'pre-wrap' },
-      composer: {
-        display: 'flex',
-        alignItems: 'flex-end',
-        gap: 8,
-        padding: '10px 12px',
-        borderTop: `1px solid ${token.border}`,
-        background: token.soft,
-      },
-      input: {
-        flex: '1 1 auto',
-        resize: 'none',
-        minHeight: 36,
-        maxHeight: 120,
-        padding: '8px 10px',
-        borderRadius: 8,
-        border: `1px solid ${token.border}`,
-        background: token.panel,
-        color: token.text,
-        fontFamily: 'inherit',
-        fontSize: 13,
-        lineHeight: 1.5,
-        outline: 'none',
-      },
-      send: {
-        flex: '0 0 auto',
-        padding: '7px 12px',
-        borderRadius: 8,
-        border: 'none',
-        background: token.brand,
-        color: '#fff',
-        fontFamily: 'inherit',
-        fontSize: 13,
-        cursor: 'pointer',
-      },
-      sendDisabled: { opacity: 0.45, cursor: 'default' },
-      footer: {
-        padding: '0 14px 10px',
-        color: token.dim,
-        fontSize: 11,
-        lineHeight: '16px',
-      },
-    }
-
     // Sparkles glyph from Lucide (ISC), stroke inherits the button's color.
     function SparkleIcon() {
       return h('svg', {
@@ -261,7 +175,7 @@ window.__ModuleLoader__.load({
         strokeLinecap: 'round',
         strokeLinejoin: 'round',
         'aria-hidden': true,
-        style: { display: 'block', flex: '0 0 auto', color: token.brand },
+        style: { display: 'block', flex: '0 0 auto' },
       },
         h('path', { key: 'a', d: 'M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z' }),
         h('path', { key: 'b', d: 'M20 2v4' }),
@@ -270,8 +184,37 @@ window.__ModuleLoader__.load({
       )
     }
 
+    function CloseIcon() {
+      return h('svg', {
+        width: 16,
+        height: 16,
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 2,
+        strokeLinecap: 'round',
+        strokeLinejoin: 'round',
+        'aria-hidden': true,
+        style: { display: 'block' },
+      },
+        h('path', { key: 'a', d: 'M18 6 6 18' }),
+        h('path', { key: 'b', d: 'm6 6 12 12' }),
+      )
+    }
+
+    function Thinking() {
+      return h('div', { className: 'qe-think' }, [
+        h('span', { key: 'label' }, COPY[useIsZh() ? 'zh' : 'en'].thinking),
+        h('span', { key: 'dots', className: 'qe-dots', 'aria-hidden': true }, [
+          h('span', { key: '1', className: 'qe-dot' }),
+          h('span', { key: '2', className: 'qe-dot' }),
+          h('span', { key: '3', className: 'qe-dot' }),
+        ]),
+      ])
+    }
+
     // Minimal inline Markdown: **bold** and `code`. Everything else stays literal text.
-    function inlineNodes(text, styles, keyPrefix) {
+    function inlineNodes(text, keyPrefix) {
       const nodes = []
       const pattern = /(\*\*[^*]+\*\*|`[^`]+`)/g
       let last = 0
@@ -279,11 +222,11 @@ window.__ModuleLoader__.load({
       let index = 0
       while ((match = pattern.exec(text)) !== null) {
         if (match.index > last) nodes.push(text.slice(last, match.index))
-        const token = match[0]
-        if (token.startsWith('**')) nodes.push(h('strong', { key: `${keyPrefix}-b${index}` }, token.slice(2, -2)))
-        else nodes.push(h('code', { key: `${keyPrefix}-c${index}`, style: styles.code }, token.slice(1, -1)))
+        const piece = match[0]
+        if (piece.startsWith('**')) nodes.push(h('strong', { key: `${keyPrefix}-b${index}` }, piece.slice(2, -2)))
+        else nodes.push(h('code', { key: `${keyPrefix}-c${index}`, className: 'qe-code' }, piece.slice(1, -1)))
         index += 1
-        last = match.index + token.length
+        last = match.index + piece.length
       }
       if (last < text.length) nodes.push(text.slice(last))
       return nodes
@@ -291,10 +234,10 @@ window.__ModuleLoader__.load({
 
     function RichAnswer({ text }) {
       const lines = String(text).split('\n')
-      return h('div', { style: styles.answer }, lines.map((line, lineIndex) => h(
+      return h('div', { className: 'qe-a' }, lines.map((line, lineIndex) => h(
         'div',
-        { key: lineIndex, style: line === '' ? styles.blank : undefined },
-        line === '' ? null : inlineNodes(line, styles, lineIndex),
+        { key: lineIndex, style: line === '' ? { height: 8 } : undefined },
+        line === '' ? null : inlineNodes(line, lineIndex),
       )))
     }
 
@@ -311,8 +254,8 @@ window.__ModuleLoader__.load({
       const [revision, setRevision] = React.useState(0)
 
       const threadRef = React.useRef(null)
+      const selectionRef = React.useRef(null)
       const scrollRef = React.useRef(null)
-      const inputRef = React.useRef(null)
       React.useEffect(() => { threadRef.current = threadId }, [threadId])
 
       const dropThread = React.useCallback(() => {
@@ -394,7 +337,9 @@ window.__ModuleLoader__.load({
               timer = window.setTimeout(tick, 350)
             } else {
               setBusy(false)
-              if (nextState === 'error') setError(value.error ?? copy.failed)
+              if (nextState === 'error') {
+                setError(value.errorCode === 'EMPTY_RESPONSE' ? copy.empty : (value.error ?? copy.failed))
+              }
               else if (nextState === 'cancelled') setError(copy.cancelled)
             }
           } catch (failure) {
@@ -417,6 +362,7 @@ window.__ModuleLoader__.load({
 
       const start = React.useCallback(async (selection) => {
         dropThread()
+        selectionRef.current = selection
         setChip(null)
         setOpen(true)
         setQuote(selection.text)
@@ -465,6 +411,29 @@ window.__ModuleLoader__.load({
         }
       }, [draft, busy, threadId])
 
+      // Retry the failed turn with the same question (or the same selection for the first turn).
+      const retry = React.useCallback(() => {
+        if (busy) return
+        setError(null)
+        const last = turns[turns.length - 1]
+        if (last && last.q !== null && last.q !== undefined) {
+          setBusy(true)
+          setTurns((previous) => {
+            const next = previous.slice()
+            next[next.length - 1] = { q: last.q, a: '', state: 'thinking' }
+            return next
+          })
+          call('ask', { threadId, question: last.q })
+            .then(() => setRevision((count) => count + 1))
+            .catch((failure) => {
+              setBusy(false)
+              setError(failure?.message ?? String(failure))
+            })
+          return
+        }
+        if (selectionRef.current !== null) void start(selectionRef.current)
+      }, [busy, turns, threadId, start])
+
       const onComposerKeyDown = (event) => {
         if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
           event.preventDefault()
@@ -472,86 +441,101 @@ window.__ModuleLoader__.load({
         }
       }
 
-      const elements = []
+      const retryable = open && error !== null && !busy && (threadId !== null || selectionRef.current !== null)
+
+      const elements = [h('style', { key: 'css' }, CSS)]
 
       if (chip !== null) {
         elements.push(h('button', {
           key: 'chip',
           type: 'button',
+          className: 'qe-chip',
           'data-quick-explain-ui': true,
           'aria-label': copy.chipLabel,
           title: copy.chipLabel,
           onMouseDown: (event) => event.preventDefault(),
           onClick: () => { void start(chip) },
           style: {
-            ...styles.chip,
-            top: Math.max(10, chip.y - 42),
-            left: Math.max(8, Math.min(window.innerWidth - 84, chip.x - 34)),
+            top: Math.max(10, chip.y - 36),
+            left: Math.max(8, Math.min(window.innerWidth - 96, chip.x - 36)),
           },
-        }, h(React.Fragment, null, h(SparkleIcon, { key: 'icon' }), h('span', { key: 'label' }, copy.chip))))
+        }, [h(SparkleIcon, { key: 'icon' }), h('span', { key: 'label' }, copy.chip)]))
       }
 
       if (open) {
         const body = []
         turns.forEach((turn, index) => {
           if (turn.q !== null && turn.q !== undefined) {
-            body.push(h('div', { key: `q${index}`, style: styles.question }, turn.q))
+            body.push(h('div', { key: `q${index}`, className: 'qe-q' }, turn.q))
           }
           if (turn.state === 'thinking' && turn.a === '') {
-            body.push(h('div', { key: `t${index}`, style: styles.think }, copy.thinking))
+            body.push(h(Thinking, { key: `t${index}` }))
           } else if (turn.a !== '') {
             body.push(h(RichAnswer, { key: `a${index}`, text: turn.a }))
           }
         })
 
-        elements.push(h('section', {
+        elements.push(h('aside', {
           key: 'panel',
+          className: 'qe-panel',
           'data-quick-explain-ui': true,
           role: 'dialog',
           'aria-label': copy.title,
           onKeyDown: (event) => { if (event.key === 'Escape') close() },
-          style: styles.panel,
         }, [
-          h('div', { key: 'header', style: styles.header }, [
+          h('header', { key: 'header', className: 'qe-header' }, [
             h('div', { key: 'titles' }, [
-              h('div', { key: 'title', style: styles.title }, copy.title),
-              h('div', { key: 'sub', style: styles.subtitle }, copy.subtitle),
+              h('div', { key: 'title', className: 'qe-title' }, copy.title),
+              h('div', { key: 'sub', className: 'qe-sub' }, copy.subtitle),
             ]),
             h('button', {
               key: 'close',
               type: 'button',
+              className: 'qe-iconbtn',
               'aria-label': copy.close,
               title: copy.close,
               onClick: close,
-              style: styles.closeButton,
-            }, '×'),
+            }, h(CloseIcon)),
           ]),
-          h('div', { key: 'quote', style: styles.quote }, quote),
-          h('div', { key: 'body', ref: scrollRef, style: styles.body }, [
+          h('div', { key: 'body', ref: scrollRef, className: 'qe-body' }, [
+            h('div', { key: 'quote', className: 'qe-quote' }, quote),
             ...body,
-            error !== null ? h('div', { key: 'err', style: styles.error }, error) : null,
+            error !== null
+              ? h('div', { key: 'err', className: 'qe-error' }, [
+                  h('span', { key: 'text' }, error),
+                  retryable
+                    ? h('button', {
+                        key: 'retry',
+                        type: 'button',
+                        className: 'qe-retry',
+                        onClick: retry,
+                      }, copy.retry)
+                    : null,
+                ].filter(Boolean))
+              : null,
           ].filter(Boolean)),
-          h('div', { key: 'composer', style: styles.composer }, [
-            h('textarea', {
-              key: 'input',
-              ref: inputRef,
-              value: draft,
-              rows: 1,
-              placeholder: busy ? copy.placeholderBusy : copy.placeholder,
-              disabled: busy,
-              onChange: (event) => setDraft(event.target.value),
-              onKeyDown: onComposerKeyDown,
-              style: styles.input,
-            }),
-            h('button', {
-              key: 'send',
-              type: 'button',
-              onClick: () => { void ask() },
-              disabled: busy || draft.trim() === '',
-              style: { ...styles.send, ...((busy || draft.trim() === '') ? styles.sendDisabled : {}) },
-            }, copy.send),
+          h('div', { key: 'composer', className: 'qe-composer' }, [
+            h('div', { key: 'wrap', className: 'qe-inputwrap' }, [
+              h('textarea', {
+                key: 'input',
+                className: 'qe-input',
+                value: draft,
+                rows: 1,
+                placeholder: busy ? copy.placeholderBusy : copy.placeholder,
+                disabled: busy,
+                onChange: (event) => setDraft(event.target.value),
+                onKeyDown: onComposerKeyDown,
+              }),
+              h('button', {
+                key: 'send',
+                type: 'button',
+                className: 'qe-send',
+                onClick: () => { void ask() },
+                disabled: busy || draft.trim() === '',
+              }, copy.send),
+            ]),
           ]),
-          h('div', { key: 'footer', style: styles.footer }, copy.footer),
+          h('div', { key: 'footer', className: 'qe-footer' }, copy.footer),
         ]))
       }
 
