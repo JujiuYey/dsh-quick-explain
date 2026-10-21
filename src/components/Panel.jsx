@@ -68,14 +68,15 @@ export function Panel({ copy, at, quote, turns, busy, error, canRetry, draft, sc
             <linearGradient
               id="qe-comet-grad"
               gradientUnits="userSpaceOnUse"
-              x1={box.w * 0.15}
+              x1="0"
               y1="0"
-              x2={box.w * 0.85}
+              x2={box.w}
               y2={box.h}
             >
-              <stop offset="0%" style={{ stopColor: 'var(--qe-logo-soft, #6c86ff)', stopOpacity: 0 }} />
-              <stop offset="40%" style={{ stopColor: 'var(--qe-logo, #4d6bfe)', stopOpacity: 0.8 }} />
-              <stop offset="100%" style={{ stopColor: 'var(--qe-logo, #4d6bfe)', stopOpacity: 1 }} />
+              <stop offset="0%" style={{ stopColor: '#ec4899' }} />
+              <stop offset="33%" style={{ stopColor: '#8b5cf6' }} />
+              <stop offset="62%" style={{ stopColor: '#4d6bfe' }} />
+              <stop offset="100%" style={{ stopColor: '#22d3ee' }} />
             </linearGradient>
           </defs>
           <rect
