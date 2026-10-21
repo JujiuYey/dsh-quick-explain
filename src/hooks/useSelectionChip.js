@@ -16,15 +16,20 @@ export function useSelectionChip() {
         if (!selection || selection.isCollapsed || selection.rangeCount === 0) return
         const text = selection.toString().trim()
         if (text === '' || text.length > MAX_SELECTION) { setChip(null); return }
+        const rect = selection.getRangeAt(0).getBoundingClientRect()
+        if (rect.width === 0 && rect.height === 0) return
+        const anchorX = rect.left + rect.width / 2
+        const anchorY = rect.top
+        // Some hosts render the transcript inside a shadow root, where the
+        // selection's anchor may be retargeted to null. Still offer the chip,
+        // just without the context paragraph and the exclusion checks.
         const anchor = selection.anchorNode
         const element = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement)
-        if (!element) return
+        if (!element) { setChip({ text, context: '', x: anchorX, y: anchorY }); return }
         // Ignore selections inside our own panel and inside editable fields.
         if (element.closest('[data-quick-explain-ui]')) return
         if (element.closest('textarea, input, [contenteditable="true"], [contenteditable=""]')) return
-        const rect = selection.getRangeAt(0).getBoundingClientRect()
-        if (rect.width === 0 && rect.height === 0) return
-        setChip({ text, context: surroundingText(selection), x: rect.left + rect.width / 2, y: rect.top })
+        setChip({ text, context: surroundingText(selection), x: anchorX, y: anchorY })
       }, 0)
     }
     const onPointerDown = (event) => {

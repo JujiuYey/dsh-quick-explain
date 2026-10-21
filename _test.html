@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script>
+window.__ModuleLoader__ = { load(mod) { window.__mod = mod } }
+window.require = (name) => {
+  if (name === 'react') return React
+  throw new Error('module not stubbed: ' + name)
+}
+</script>
+<script src="client.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<p id="text" style="max-width:480px">DeepSeek Harness is an agent framework. Select any fragment of this sentence and the quick explain chip should appear right above the highlight, letting you open a temporary side conversation that explains it without touching the main session history.</p>
+<script>
+const plugin = window.__mod.factory(require)
+const ctx = {
+  slots: {
+    inject: (slot, fn) => fn(),
+    register: (meta, component) => { window.__Comp = component },
+  },
+}
+plugin.apply(ctx)
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(window.__Comp))
+</script>
+</body>
+</html>
